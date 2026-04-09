@@ -8,8 +8,10 @@
 
 **Resume-Analyzer** is a state-of-the-art, fully local intelligence tool designed to bridge the gap between candidates and job descriptions. By leveraging a sophisticated **LangGraph-driven RAG pipeline**, it provides granular match scoring, skill gap analysis, and actionable career insights—all without your data ever leaving your machine.
 
-![Dashboard Preview](https://via.placeholder.com/800x450?text=Resume+Analyzer+Dashboard)
-_Visualizing candidate-to-job fit with real-time streaming updates._
+![Analysis Step 1](assets/screenshots/1.png)
+![Analysis Step 2](assets/screenshots/2.png)
+![Analysis Step 3](assets/screenshots/3.png)
+_Demonstrating the full resume analysis lifecycle—from initialization to final scoring and gap analysis._
 
 ---
 
@@ -113,4 +115,4 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 
 ---
 
-**Built by [Aashish](https://github.com/Aashish365)**
+**Built by ❤️ [Aashish](https://github.com/Aashish365)**

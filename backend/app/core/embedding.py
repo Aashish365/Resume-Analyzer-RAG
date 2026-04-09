@@ -66,9 +66,6 @@ def _harrier_encode(texts: List[str], prompt_name: str | None) -> List[List[floa
     kwargs = dict(
         normalize_embeddings=True,
         show_progress_bar=False,
-        # num_workers=0: disable DataLoader multiprocessing — spawning sub-processes
-        # inside a Celery fork-pool worker causes a deadlock on Linux.
-        num_workers=0,
         batch_size=32,
     )
     if prompt_name:
