@@ -74,8 +74,8 @@ The system is built on a distributed microservices architecture, ensuring high p
 1.  **Clone the Repository**
 
     ```bash
-    git clone [https://github.com/yourusername/Resume-Analyzer.git](https://github.com/yourusername/Resume-Analyzer.git)
-    cd Resume-Analyzer
+    git clone [https://github.com/Aashish365/Resume-Analyzer-RAG.git](https://github.com/Aashish365/Resume-Analyzer-RAG.git)
+    cd Resume-Analyzer-RAG
     ```
 
 2.  **Environment Setup**
@@ -94,7 +94,6 @@ The system is built on a distributed microservices architecture, ensuring high p
 
 4.  **Access the Application**
     - **Web UI**: `http://localhost`
-    - **API Documentation**: `http://localhost/api/docs`
 
 ---
 
@@ -114,4 +113,4 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 
 ---
 
-**Built by [Aashish](https://github.com/yourusername)**
+**Built by [Aashish](https://github.com/Aashish365)**
