@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:opendataloader.org)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(docker info:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker exec:*)",
+      "Bash(curl -s http://localhost/api/v1/health)",
+      "Bash(curl -s http://localhost:8001/api/v1/heartbeat)",
+      "Bash(curl -s http://localhost:11434/api/tags)",
+      "Bash(python -c \"import sys,json; tags=json.load\\(sys.stdin\\).get\\('models',[]\\); print\\('Ollama models:', [m['name'] for m in tags] if tags else 'still pulling...'\\)\")",
+      "Bash(curl -s http://localhost:8001/api/v2/heartbeat)",
+      "Bash(xargs grep:*)",
+      "Bash(.venv/Scripts/python.exe -m ruff check app/ --select F401,F811)",
+      "Bash(.venv/Scripts/python.exe -m vulture app/ --min-confidence 80)",
+      "Bash(.venv/Scripts/pip.exe install:*)",
+      "Bash(.venv/Scripts/ruff.exe check:*)",
+      "Bash(.venv/Scripts/vulture.exe app/ --min-confidence 60)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\ashis\\Downloads\\Resume-Analyzer\\.claude"
+    ]
+  }
+}

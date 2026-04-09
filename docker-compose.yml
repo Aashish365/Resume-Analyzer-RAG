@@ -1,0 +1,154 @@
+version: "3.8"
+
+services:
+
+  # ── Infrastructure ─────────────────────────────────────────────────────────
+
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./volumes/chromadb:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+    healthcheck:
+      # chromadb image has no curl/wget/python — use bash built-in TCP check
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8000' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./volumes/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=resumeanalyzer
+      - POSTGRES_PASSWORD=changeme
+      - POSTGRES_DB=resumeanalyzer
+    volumes:
+      - ./volumes/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U resumeanalyzer"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./volumes/ollama:/root/.ollama
+    # Wait for ollama to be ready, then pull the model only if not already cached.
+    # sleep 5 was too short; retry loop handles slow cold starts gracefully.
+    entrypoint: >
+      /bin/bash -c "
+        ollama serve &
+        for i in $(seq 1 15); do ollama list && break || sleep 5; done &&
+        ollama list | grep -q 'llama3.2' || ollama pull llama3.2 &&
+        wait
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ── Application ────────────────────────────────────────────────────────────
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://resumeanalyzer:changeme@postgres:5432/resumeanalyzer
+      - UPLOAD_DIR=/app/uploads
+    volumes:
+      - ./volumes/uploads:/app/uploads
+      - ./volumes/hf_cache:/root/.cache/huggingface
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+
+  celery_worker:
+    build: ./backend
+    # --concurrency=1: one task at a time prevents two workers racing to load the
+    # Harrier model simultaneously, which causes a fork-pool deadlock.
+    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=1
+    env_file: .env
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://resumeanalyzer:changeme@postgres:5432/resumeanalyzer
+      - UPLOAD_DIR=/app/uploads
+      # Prevent PyTorch / HuggingFace tokenizer thread pools from deadlocking
+      # after Celery forks the worker process.
+      - TOKENIZERS_PARALLELISM=false
+      - OMP_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+    volumes:
+      - ./volumes/uploads:/app/uploads
+      - ./volumes/hf_cache:/root/.cache/huggingface
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy    # worker calls Ollama directly for LLM inference
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # NEXT_PUBLIC_* vars are embedded at build time — must be passed as build args
+        NEXT_PUBLIC_API_URL: http://localhost/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - frontend

@@ -1,0 +1,33 @@
+# docker-compose.override.yml
+#
+# Automatically merged by Docker Compose on every `docker compose up`.
+# Mounts source code as live volumes so code changes reflect without rebuilding.
+#
+# Frontend: runs Next.js dev server (HMR enabled)
+# Backend:  runs uvicorn with --reload (restarts on Python file change)
+# Worker:   mounts source so a manual restart picks up the latest code
+
+version: "3.8"
+
+services:
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev   # installs node_modules in image — no volume tricks needed
+    command: npx next dev            # webpack mode — Turbopack ignores WATCHPACK_POLLING
+    volumes:
+      - ./frontend/src:/app/src       # live source
+      - ./frontend/public:/app/public # live static assets
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost/api
+      - WATCHPACK_POLLING=500         # poll every 500 ms — required for HMR in Docker on Windows/Mac
+
+  backend:
+    volumes:
+      - ./backend/app:/app/app        # overlays app/ source; uvicorn --reload picks up changes
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  celery_worker:
+    volumes:
+      - ./backend/app:/app/app        # latest code available on next manual restart
